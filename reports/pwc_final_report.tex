@@ -24,16 +24,17 @@
 
 \definecolor{farblue}{HTML}{2F6B9A}
 \definecolor{nearorange}{HTML}{C56A22}
-\definecolor{softgray}{HTML}{F1F3F5}
+\definecolor{polarred}{HTML}{B8423F}
 \definecolor{darkgreen}{HTML}{347A57}
+\definecolor{softgray}{HTML}{F1F3F5}
 
 \hypersetup{
   colorlinks=true,
   linkcolor=black,
   citecolor=black,
   urlcolor=farblue,
-  pdftitle={Channel Estimation for XL-MIMO: Final Report},
-  pdfauthor={Student Name}
+  pdftitle={Channel Estimation for Extremely Large-Scale MIMO},
+  pdfauthor={Group 1}
 }
 
 \newcommand{\fieldvec}[1]{\boldsymbol{#1}}
@@ -43,410 +44,439 @@
 \begin{document}
 
 % ---------------------------------------------------------------------------
-% Page 1: Introduction and contributions
+% Page 1: Motivation and channel models
 % ---------------------------------------------------------------------------
 \begin{center}
-  {\Large\bfseries Channel Estimation for Extremely Large-Scale Massive
-  MIMO:\\[0.15em] Far-Field, Near-Field, or Hybrid-Field?}
+  {\Large\bfseries Channel Estimation for Extremely Large-Scale MIMO:\\
+  Far-Field or Near-Field?}
 
   \vspace{0.55em}
-  \infofield{Course}{{Principles of Wireless Communications}}\\[0.35em]
-  \infofield{Student}{{\chinesefont 朱昱安、何傳盛、楊予綸、柯均儒、陳楷寰、王郁仁}}\\[0.35em]
+  \infofield{Course}{Principles of Wireless Communications}\\[0.35em]
+  \infofield{Student}{{\chinesefont
+  朱昱安、何傳盛、楊予綸、柯均儒、陳楷寰、王郁仁}}\\[0.35em]
   \infofield{Instructor}{Prof. Shih-Chun Lin}
   \infofield{Date}{2026/06/09}
 \end{center}
 
-\vspace{-0.5em}
-\tightsection{Introduction}
+\vspace{-0.45em}
+\tightsection{Motivation}
 
-Extremely large-scale massive multiple-input multiple-output (XL-MIMO)
-equips a base station (BS) with hundreds of antennas. The resulting aperture
-offers high array gain and spatial resolution for future 6G systems, but it
-also creates a difficult channel-estimation problem: the channel dimension
-grows with the antenna count, while sending one orthogonal pilot per antenna
-would consume an impractical amount of time and spectrum.
+Extremely large-scale multiple-input multiple-output (XL-MIMO) uses
+hundreds of antennas to provide the array gain and spatial resolution
+needed for high-rate 6G links. Accurate channel state information is
+essential for precoding, yet the number of radio-frequency chains is much
+smaller than the number of antennas. Directly estimating every antenna
+coefficient would therefore require excessive pilot overhead.
 
-Wei and Dai identify a second problem that is specific to very large
-apertures \cite{wei2022}. Conventional massive-MIMO estimation assumes that
-all relevant scatterers are far from the array, so their waves are planar.
-In XL-MIMO, the Rayleigh distance can extend tens of metres; nearby
-scatterers then produce spherical waves. A practical channel can therefore
-contain far-field and near-field paths at the same time. The paper calls
-this the \emph{hybrid-field} condition.
+Compressed sensing reduces this overhead by assuming that only a few paths
+are active in an angular Fourier dictionary. Cui and Dai show that this
+assumption breaks down when the XL-MIMO aperture places users or scatterers
+in the near field \cite{cui2022}.
 
-\begin{figure}[ht]
-  \centering
-  \begin{tikzpicture}[
-      >=Latex,
-      antenna/.style={draw,fill=black,minimum width=0.08cm,minimum height=0.48cm},
-      scatter/.style={circle,draw,minimum size=0.56cm,align=center,font=\small},
-      label/.style={font=\small,align=center}
-    ]
-    \foreach \x in {0,0.35,...,3.15}
-      \node[antenna] at (\x,0) {};
-    \node[label] at (1.58,-0.55) {XL-MIMO base-station array};
+\tightsection{Far-Field and Near-Field Propagation}
 
-    \node[scatter,fill=nearorange!14] (near) at (5.1,1.0) {near\\scatterer};
-    \node[scatter,fill=farblue!14] (far) at (10.8,1.0) {far\\scatterer};
-    \node[label,nearorange] at (5.1,1.85) {spherical wavefront};
-    \node[label,farblue] at (10.8,1.85) {approximately planar wavefront};
-
-    \foreach \y in {-0.15,0.05,0.25}
-      \draw[nearorange,thick] (3.25,\y) to[bend left=12] (near.west);
-    \foreach \y in {-0.15,0.05,0.25}
-      \draw[farblue,thick] (3.25,\y) -- (far.west);
-    \draw[dashed] (7.4,-0.7) -- (7.4,1.9);
-    \node[label] at (7.4,-0.98) {conceptual field boundary};
-  \end{tikzpicture}
-  \caption{Original conceptual illustration of a hybrid-field XL-MIMO
-  environment. Different paths can obey different wavefront models.}
-  \label{fig:environment}
-\end{figure}
-
-\tightsection{Problem and Contributions}
-
-Far-field methods exploit sparsity in an angle-domain dictionary, whereas
-near-field methods use a larger polar-domain dictionary indexed by angle
-and distance. Applying either one to the complete hybrid channel produces
-model mismatch and energy leakage. The paper addresses this gap through
-three linked contributions:
-\begin{enumerate}
-  \item It identifies mixed far-field and near-field propagation as a
-  realistic XL-MIMO channel feature.
-  \item It introduces a hybrid-field model whose mixing parameter controls
-  the proportion of the two path types.
-  \item It proposes hybrid-field orthogonal matching pursuit (HF-OMP),
-  which estimates each path type in its matching sparse domain while
-  retaining low pilot overhead.
-\end{enumerate}
-
-\newpage
-
-% ---------------------------------------------------------------------------
-% Page 2: System and existing models
-% ---------------------------------------------------------------------------
-\tightsection{Signal Model and Propagation Regions}
-
-For downlink training from an $N$-antenna BS to a single-antenna user, the
-received pilots are
+The boundary is approximated by the Rayleigh distance
 \begin{equation}
-  \fieldvec{y}=\fieldvec{P}\fieldvec{h}+\fieldvec{n},
-  \label{eq:signal}
-\end{equation}
-where $\fieldvec{h}$ is the channel, $\fieldvec{P}$ is the pilot matrix,
-and $\fieldvec{n}$ is noise. Since low-overhead estimation requires
-$M\ll N$, recovery depends on a sparse physical model.
-
-The boundary between propagation regions is approximated by the Rayleigh
-distance
-\begin{equation}
-  Z=\frac{2D^{2}}{\lambda},
+  Z=\frac{2D^2}{\lambda},
   \label{eq:rayleigh}
 \end{equation}
-with aperture $D$ and wavelength $\lambda$. Scatterers beyond $Z$ use a
-planar-wave model; those inside $Z$ require a spherical-wave model. Because
-$Z$ grows quadratically with $D$, XL-MIMO greatly enlarges the near field.
-
-\tightsection{Existing Sparse Channel Models}
-
-\subsection{Far-Field: Angle-Domain Sparsity}
-
-For $L$ paths, planar-wave phases progress linearly across the array. The
-channel is represented as
-\begin{equation}
-  \fieldvec{h}_{\mathrm{far}}=\fieldvec{F}\fieldvec{h}^{A},
-  \label{eq:far}
-\end{equation}
-where $\fieldvec{F}$ is a DFT dictionary and $\fieldvec{h}^{A}$ is sparse
-because only a few angles contain paths. Angle-domain OMP exploits this
-sparsity.
-
-\subsection{Near-Field: Polar-Domain Sparsity}
-
-A spherical wave depends on angle and distance, so a DFT dictionary spreads
-its energy across many bins. The polar representation is
-\begin{equation}
-  \fieldvec{h}_{\mathrm{near}}=\fieldvec{W}\fieldvec{h}^{P},
-  \label{eq:near}
-\end{equation}
-where $\fieldvec{W}$ samples angle--distance points and
-$\fieldvec{h}^{P}$ is sparse. It is accurate for nearby scatterers, but
-$\fieldvec{W}$ is larger and less orthogonal than $\fieldvec{F}$.
-
-\begin{table}[!ht]
-  \centering
-  \caption{Comparison of the two conventional models.}
-  \label{tab:models}
-  \small
-  \renewcommand{\arraystretch}{0.98}
-  \begin{tabular}{>{\raggedright\arraybackslash}p{2.2cm}
-                  >{\raggedright\arraybackslash}p{2.8cm}
-                  >{\raggedright\arraybackslash}p{2.8cm}
-                  >{\raggedright\arraybackslash}p{3.2cm}}
-    \toprule
-    & \textbf{Far field} & \textbf{Near field} & \textbf{Mismatch effect} \\
-    \midrule
-    Wavefront & Planar & Spherical & Phase mismatch \\
-    Variables & Angle & Angle and distance & Energy spread \\
-    Sparse domain & DFT/angle & Polar & Extra atoms \\
-    Dictionary & $N\times N$ & $N\times S$, $S>N$ & Coherence and cost \\
-    \bottomrule
-  \end{tabular}
-\end{table}
-
-For a mixed channel, near-field paths leak in $\fieldvec{F}$ and far-field
-paths leak in $\fieldvec{W}$. The complete channel is therefore not sparse
-enough in either single dictionary for accurate conventional OMP.
-
-\newpage
-
-% ---------------------------------------------------------------------------
-% Page 3: Hybrid-field model
-% ---------------------------------------------------------------------------
-\tightsection{Proposed Hybrid-Field Channel Model}
-
-The paper models the channel as a superposition of far-field and near-field
-components:
-\begin{equation}
-\begin{split}
-  \fieldvec{h}_{\mathrm{hybrid}}
-  ={}& \sqrt{\frac{N}{L}}
-  \sum_{\ell_f=1}^{\gamma L}
-    \alpha_{\ell_f}\fieldvec{a}(\theta_{\ell_f})\\
-  &+\sqrt{\frac{N}{L}}
-  \sum_{\ell_n=1}^{(1-\gamma)L}
-    \beta_{\ell_n}\fieldvec{b}(\theta_{\ell_n},r_{\ell_n}),
-\end{split}
-\label{eq:hybrid}
-\end{equation}
-where $L$ is the total number of paths and $\gamma\in[0,1]$ controls their
-composition. The first sum contains $\gamma L$ planar-wave paths, and the
-second contains $(1-\gamma)L$ spherical-wave paths.
-
-This formulation is general rather than a third unrelated propagation
-law. At $\gamma=1$, it reduces to the standard far-field model. At
-$\gamma=0$, it becomes the near-field model. Intermediate values describe
-mixed environments, such as a distant direct link accompanied by
-scatterers close to the BS.
+where $D$ is the array aperture and $\lambda$ is the wavelength. Since
+$Z$ grows quadratically with $D$, an XL-MIMO array can have a near-field
+region extending over a large part of a cell.
 
 \begin{figure}[ht]
   \centering
   \begin{tikzpicture}[
       >=Latex,
-      box/.style={draw,rounded corners,minimum width=3.2cm,minimum height=1.05cm,
-                  align=center,font=\small},
-      plus/.style={circle,draw,minimum size=0.62cm,font=\large},
+      antenna/.style={draw,fill=black,minimum width=0.07cm,minimum height=0.42cm},
+      terminal/.style={draw,rounded corners,minimum width=0.7cm,minimum height=1.0cm},
       note/.style={font=\small,align=center}
     ]
-    \node[box,fill=farblue!12] (far) at (0,0)
-      {Angle dictionary $\fieldvec{F}$\\sparse coefficients $\fieldvec{h}^{A}$};
-    \node[plus] (plus) at (4.0,0) {$+$};
-    \node[box,fill=nearorange!12] (near) at (8.0,0)
-      {Polar dictionary $\fieldvec{W}$\\sparse coefficients $\fieldvec{h}^{P}$};
-    \node[box,fill=darkgreen!12,minimum width=4.1cm] (hybrid) at (4.0,-1.55)
-      {Hybrid channel\\$\fieldvec{h}=\fieldvec{F}\fieldvec{h}^{A}
-      +\fieldvec{W}\fieldvec{h}^{P}$};
-    \draw[->,thick,farblue] (far) -- (plus);
-    \draw[->,thick,nearorange] (near) -- (plus);
-    \draw[->,thick,darkgreen] (plus) -- (hybrid);
-    \node[note,farblue] at (0,1.0) {$\gamma L$ paths};
-    \node[note,nearorange] at (8.0,1.0) {$(1-\gamma)L$ paths};
+    \foreach \x in {0,0.32,...,2.88} \node[antenna] at (\x,0) {};
+    \node[note] at (1.44,-0.52) {XL-MIMO array};
+    \node[terminal,fill=nearorange!10] (near) at (5.0,0.65) {near};
+    \node[terminal,fill=farblue!10] (far) at (10.8,0.65) {far};
+    \foreach \y in {-0.15,0.05,0.25}
+      \draw[nearorange,thick] (3.0,\y) to[bend left=14] (near.west);
+    \foreach \y in {-0.15,0.05,0.25}
+      \draw[farblue,thick] (3.0,\y) -- (far.west);
+    \draw[dashed] (7.7,-0.65) -- (7.7,1.45);
+    \node[note,nearorange] at (5.0,1.55)
+      {spherical wave\\angle $\theta$ and distance $r$};
+    \node[note,farblue] at (10.8,1.55)
+      {planar wave\\angle $\theta$ only};
+    \node[note] at (7.7,-0.9) {Rayleigh boundary};
   \end{tikzpicture}
-  \caption{Original representation of the hybrid-field model as the sum of
-  two components that are sparse in different dictionaries.}
-  \label{fig:representation}
+  \caption{Propagation models emphasized in the group presentation.}
+  \label{fig:fields}
 \end{figure}
 
-\tightsection{Why a Single Dictionary Fails}
+Far-field phase changes linearly across the array, so one Fourier vector
+$\fieldvec{a}(\theta)$ is sufficient. Near-field phase also depends on
+distance and requires $\fieldvec{b}(\theta,r)$. An angle-only dictionary
+therefore spreads one physical near-field path over many bins.
 
-Substituting the two sparse representations into
-Equation~\eqref{eq:signal} gives
-\begin{equation}
-  \fieldvec{y}
-  =\fieldvec{P}\fieldvec{F}\fieldvec{h}^{A}
-   +\fieldvec{P}\fieldvec{W}\fieldvec{h}^{P}
-   +\fieldvec{n}.
-  \label{eq:joint}
-\end{equation}
-This equation exposes the estimation challenge. If far-field OMP uses only
-$\fieldvec{P}\fieldvec{F}$, the spherical-wave component behaves like
-structured interference and may require many angle atoms. If near-field
-OMP uses only $\fieldvec{P}\fieldvec{W}$, a planar-wave component can leak
-among multiple polar atoms. In either case, the assumed sparsity level and
-the true representation no longer agree.
+\tightsection{Paper Contributions}
 
-\tightsection{Interpretation and Significance}
-
-The main conceptual contribution is to match each physical path class with
-its natural coordinate system. The hybrid model preserves the low number
-of physical scatterers instead of forcing every path into one oversized
-representation. It also provides a controlled simulation framework:
-varying $\gamma$ tests pure near-field, mixed-field, and pure far-field
-conditions with the same total path count.
-
-HF-OMP assumes that $L$ and $\gamma$ are known. A practical system would
-need to estimate or select both values adaptively.
+The paper restores sparsity with a polar dictionary that samples angle and
+distance, then proposes P-SOMP for on-grid recovery and P-SIGW for off-grid
+refinement. The key question is which coordinates preserve physical
+sparsity.
 
 \newpage
 
 % ---------------------------------------------------------------------------
-% Page 4: HF-OMP
+% Page 2: Polar-domain representation
 % ---------------------------------------------------------------------------
-\tightsection{HF-OMP Channel Estimation}
+\tightsection{Near-Field Channel Model}
 
-HF-OMP separates Equation~\eqref{eq:joint} into two sparse-recovery stages.
-It first searches the smaller, better-conditioned angle dictionary and
-then explains the remaining observation with the polar dictionary.
+For a uniform linear array with centered antenna index $n$, spacing $d$,
+and wavenumber $k_c=2\pi/\lambda$, the near-field steering vector is
+\begin{equation}
+  \fieldvec{b}(\theta,r)
+  =\frac{1}{\sqrt{N}}
+  \left[e^{-jk_c(r^{(0)}-r)},\ldots,
+        e^{-jk_c(r^{(N-1)}-r)}\right]^{H},
+  \label{eq:steering}
+\end{equation}
+where
+\begin{equation}
+  r^{(n)}=\sqrt{r^2+n^2d^2-2rnd\theta}
+  \label{eq:distance}
+\end{equation}
+is the distance between the source and antenna $n$. Unlike a Fourier
+vector, Equation~\eqref{eq:steering} has a nonlinear phase progression
+that changes with both $\theta$ and $r$.
+
+With a limited number of paths, the channel remains compressible even
+though it is not sparse in angle. The proposed representation is
+\begin{equation}
+  \fieldvec{h}_m=\fieldvec{W}\fieldvec{h}^{P}_m,
+  \label{eq:polar}
+\end{equation}
+where every column of $\fieldvec{W}$ is a sampled steering vector
+$\fieldvec{b}(\theta_p,r_p)$ and $\fieldvec{h}^{P}_m$ is sparse in the
+polar domain. The subscript $m$ denotes a subcarrier; the path locations
+are shared across subcarriers, which enables simultaneous recovery.
+
+\tightsection{From Energy Spread to Polar Sparsity}
+
+\begin{figure}[ht]
+  \centering
+  \begin{tikzpicture}[x=0.72cm,y=2.2cm,font=\small,scale=0.95,transform shape]
+    % Left axes
+    \draw[->] (0,0) -- (7.2,0) node[right] {angle};
+    \draw[->] (0,0) -- (0,1.15) node[above] {magnitude};
+    \node[font=\bfseries] at (3.5,1.25) {Angular domain};
+    \draw[farblue,thick]
+      plot[smooth] coordinates {(0.3,0.02)(0.9,0.03)(1.3,0.08)(1.55,0.95)
+      (1.8,0.08)(2.5,0.02)(3.2,0.04)(3.55,1.0)(3.9,0.05)
+      (4.8,0.02)(5.3,0.06)(5.65,0.9)(5.95,0.05)(6.7,0.02)};
+    \draw[nearorange,thick]
+      plot[smooth] coordinates {(0.3,0.03)(0.8,0.08)(1.2,0.35)(1.6,0.55)
+      (2.0,0.32)(2.5,0.08)(3.0,0.15)(3.5,0.48)(4.0,0.28)
+      (4.6,0.1)(5.1,0.22)(5.65,0.52)(6.1,0.24)(6.7,0.05)};
+    \node[farblue] at (1.2,1.03) {far};
+    \node[nearorange] at (5.9,0.67) {near: spread};
+
+    % Right axes
+    \begin{scope}[xshift=8.3cm]
+      \draw[->] (0,0) -- (7.2,0) node[right] {polar grid};
+      \draw[->] (0,0) -- (0,1.15) node[above] {gain};
+      \node[font=\bfseries] at (3.5,1.25) {Polar domain};
+      \foreach \x/\h in {1.0/0.55,2.1/0.92,3.7/0.68,5.0/1.0,6.1/0.48} {
+        \draw[polarred,very thick] (\x,0) -- (\x,\h);
+        \fill[polarred] (\x,\h) circle (1.4pt);
+      }
+      \node[polarred] at (3.7,1.03) {few physical paths};
+    \end{scope}
+  \end{tikzpicture}
+  \caption{Energy spread and polar sparsity, adapted from
+  Fig.~8 of \cite{cui2022}.}
+  \label{fig:sparsity}
+\end{figure}
+
+Figure~\ref{fig:sparsity} captures the key motivation selected by the
+group. In the angular domain, a far-field path forms a narrow peak, while
+a near-field path occupies many bins. In the polar domain, each path is
+represented by an angle--distance pair and the channel again contains only
+a few significant coefficients. This restored sparsity is what makes
+low-pilot compressed sensing practical.
+
+\tightsection{Dictionary Design Objective}
+
+The polar grid should not contain highly similar columns. The paper
+therefore designs its samples to reduce
+\begin{equation}
+  \mu=\max_{p\neq q}
+  \left|\fieldvec{b}^{H}(\theta_p,r_p)
+              \fieldvec{b}(\theta_q,r_q)\right|,
+  \label{eq:coherence}
+\end{equation}
+because lower coherence improves the reliability of sparse support
+detection.
+
+\newpage
+
+% ---------------------------------------------------------------------------
+% Page 3: Transform matrix W
+% ---------------------------------------------------------------------------
+\tightsection{Design of the Polar-Domain Matrix \texorpdfstring{$W$}{W}}
+
+The exact spherical distance makes direct grid design difficult. The
+Fresnel approximation separates its phase into
+\begin{equation}
+  r^{(n)}-r
+  \approx -nd\theta+\frac{n^2d^2(1-\theta^2)}{2r}.
+  \label{eq:fresnel}
+\end{equation}
+The linear term describes angle; the quadratic term contains the coupled
+quantity $(1-\theta^2)/r$. This yields the two sampling rules emphasized in
+slides 9--17.
+
+\tightsection{Angular Sampling on Distance Rings}
+
+Locations satisfying
+\begin{equation}
+  \frac{1-\theta^2}{r}=\frac{1}{\rho}
+  \label{eq:ring}
+\end{equation}
+have the same quadratic phase and lie on a \emph{distance ring} $\rho$.
+Within one ring, coherence is governed by the same linear phase as in a
+far-field Fourier dictionary. Therefore the angles are sampled uniformly:
+\begin{equation}
+  \theta_n=\frac{2n-N+1}{N},
+  \qquad n=0,1,\ldots,N-1.
+  \label{eq:angle-sampling}
+\end{equation}
+
+\tightsection{Nonuniform Distance Sampling}
+
+For vectors at the same angle, coherence depends on the difference between
+inverse distances. To keep adjacent columns below a chosen coherence
+threshold, the sampled distance at angle $\theta$ follows
+\begin{equation}
+  r_s(\theta)=\frac{1}{s}Z_{\Delta}(1-\theta^2),
+  \qquad s=0,1,2,\ldots,
+  \label{eq:distance-sampling}
+\end{equation}
+where $Z_{\Delta}$ is determined by the array, wavelength, and desired
+coherence threshold. The case $s=0$ denotes an infinite-distance
+far-field ring. Thus distance is sampled uniformly in inverse distance,
+not uniformly in metres.
 
 \begin{figure}[ht]
   \centering
   \begin{tikzpicture}[
       >=Latex,
-      flowbox/.style={draw,rounded corners,fill=softgray,minimum width=10.8cm,
-                   minimum height=0.78cm,align=center,font=\small},
-      arrow/.style={->,thick}
+      ring/.style={draw,ellipse,minimum width=#1,minimum height=1.0cm},
+      sample/.style={circle,fill=polarred,inner sep=1.4pt},
+      note/.style={font=\small,align=center}
     ]
-    \node[flowbox] (input) {Input $\fieldvec{y},\fieldvec{P},\fieldvec{F},
-      \fieldvec{W},L,\gamma$; initialize residual
-      $\fieldvec{r}\leftarrow\fieldvec{y}$};
-    \node[flowbox,fill=farblue!12,below=0.38cm of input] (far)
-      {1. Run $\gamma L$ OMP selections with
-      $\fieldvec{A}_{f}=\fieldvec{P}\fieldvec{F}$; estimate
-      $\widehat{\fieldvec{h}}^{A}$ and subtract its contribution};
-    \node[flowbox,fill=nearorange!12,below=0.38cm of far] (near)
-      {2. Run $(1-\gamma)L$ OMP selections with
-      $\fieldvec{A}_{n}=\fieldvec{P}\fieldvec{W}$; estimate
-      $\widehat{\fieldvec{h}}^{P}$ from the updated residual};
-    \node[flowbox,fill=darkgreen!12,below=0.38cm of near] (out)
-      {3. Reconstruct
-      $\widehat{\fieldvec{h}}=\fieldvec{F}\widehat{\fieldvec{h}}^{A}
-      +\fieldvec{W}\widehat{\fieldvec{h}}^{P}$};
-    \draw[arrow] (input) -- (far);
-    \draw[arrow] (far) -- (near);
-    \draw[arrow] (near) -- (out);
+    \node[draw,fill=black,minimum width=2.4cm,minimum height=0.15cm] (array) at (0,0) {};
+    \node[note] at (0,-0.45) {array};
+    \draw[nearorange,thick] (0,0.1) arc[start angle=180,end angle=0,x radius=2.0cm,y radius=0.65cm];
+    \draw[nearorange!75,thick] (0,0.1) arc[start angle=180,end angle=0,x radius=3.1cm,y radius=1.05cm];
+    \draw[nearorange!50,thick] (0,0.1) arc[start angle=180,end angle=0,x radius=4.2cm,y radius=1.45cm];
+    \foreach \x/\y in {0.7/0.48,1.5/0.69,2.4/0.74,3.3/0.61,
+                       1.0/0.74,2.1/1.10,3.5/1.15,4.8/0.86,
+                       1.4/0.96,2.8/1.48,4.6/1.52,6.2/1.05}
+      \node[sample] at (\x,\y) {};
+    \node[note,nearorange] at (6.0,1.85)
+      {uniform angles\\on each ring};
+    \draw[->,nearorange] (5.3,1.7) -- (4.6,1.52);
+    \node[note] at (8.7,0.8)
+      {ring spacing is\\nonuniform in distance\\and uniform in $1/r$};
+    \draw[->] (7.6,0.85) -- (6.2,1.05);
   \end{tikzpicture}
-  \caption{Original flowchart of the three-stage HF-OMP procedure.}
-  \label{fig:hfomp}
+  \caption{Conceptual distance-ring sampling used to construct
+  $\fieldvec{W}$.}
+  \label{fig:rings}
 \end{figure}
 
-\subsection{Stage 1: Far-Field Recovery}
+\tightsection{Matrix Construction}
 
-With $\fieldvec{A}_{f}=\fieldvec{P}\fieldvec{F}$, each OMP iteration
-selects the column most correlated with the current residual. A
-least-squares update estimates the gains on the selected support. After
-$\gamma L$ selections, the algorithm subtracts the reconstructed far-field
-contribution. Starting with this stage is computationally attractive
-because $\fieldvec{F}$ has only $N$ orthogonal columns.
-
-\subsection{Stage 2: Near-Field Recovery}
-
-The remaining residual is searched using
-$\fieldvec{A}_{n}=\fieldvec{P}\fieldvec{W}$. The selected polar atoms
-identify both angle and distance. The residual update accounts for the
-estimated near-field component as well as the far-field component already
-found. At $\gamma=1$ this stage disappears; at $\gamma=0$ the first stage
-disappears, so conventional far-field and near-field OMP are endpoint
-cases of HF-OMP.
-
-\subsection{Stage 3: Reconstruction and Complexity}
-
-The two estimated sparse vectors are transformed back to the antenna
-domain and added. Following the paper's notation, the approximate
-complexity is
+Each ring produces
 \begin{equation}
-  \mathcal{O}\!\left(NM(\gamma L)^3\right)
-  +\mathcal{O}\!\left(SM((1-\gamma)L)^3\right)
-  +\mathcal{O}(NS).
-  \label{eq:complexity}
+  \fieldvec{W}_s=
+  [\fieldvec{b}(\theta_0,r_{s,0}),\ldots,
+   \fieldvec{b}(\theta_{N-1},r_{s,N-1})],
 \end{equation}
-The polar search is the expensive part because $S$ can greatly exceed
-$N$. HF-OMP nevertheless avoids using the large polar dictionary for paths
-that are naturally represented by the DFT dictionary.
-
-\tightsection{Practical Trade-Offs}
-
-The sequential structure is simple and interpretable, but early support
-errors can contaminate the residual used in Stage 2. Grid-based
-dictionaries also create off-grid leakage, and closely spaced atoms in
-$\fieldvec{W}$ can be difficult to distinguish. Joint recovery, adaptive
-field classification, or off-grid refinement could improve robustness at
-the price of additional computation.
+and $\fieldvec{W}=[\fieldvec{W}_0,\ldots,\fieldvec{W}_{S-1}]
+\in\mathbb{C}^{N\times NS}$. The $s=0$ far-field ring makes the Fourier
+dictionary a special case.
 
 \newpage
 
 % ---------------------------------------------------------------------------
-% Page 5: Results, assessment, conclusion, references
+% Page 4: Algorithms
+% ---------------------------------------------------------------------------
+\tightsection{Near-Field Channel Estimation Algorithms}
+
+After analog combining, the noise is colored. The paper first applies a
+Cholesky-based pre-whitening transform and obtains the multi-subcarrier
+model
+\begin{equation}
+  \overline{\fieldvec{Y}}
+  =\overline{\fieldvec{\Phi}}\fieldvec{H}^{P}
+   +\overline{\fieldvec{N}},
+  \qquad
+  \overline{\fieldvec{\Phi}}
+  =\fieldvec{D}^{-1}\fieldvec{A}\fieldvec{W}.
+  \label{eq:whitened}
+\end{equation}
+The rows of $\fieldvec{H}^{P}$ share a common sparse support because path
+angles and distances are common across subcarriers.
+
+\begin{figure}[ht]
+  \centering
+  \begin{tikzpicture}[
+      >=Latex,
+      box/.style={draw,rounded corners,minimum width=5.55cm,
+                  minimum height=0.78cm,align=center,font=\small},
+      arrow/.style={->,thick}
+    ]
+    \node[box,fill=softgray] (input) at (0,0)
+      {Pilots, combiner, and polar dictionary};
+    \node[box,fill=farblue!10,below=0.35cm of input] (white)
+      {Pre-whiten observations and sensing matrix};
+    \node[box,fill=farblue!14,below=0.35cm of white] (psomp)
+      {P-SOMP: support search, least squares,\\residual update, channel synthesis};
+    \node[box,fill=nearorange!13,right=0.65cm of psomp] (psigw)
+      {P-SIGW: initialize from P-SOMP,\\refine angle, distance, and gain};
+    \node[box,fill=darkgreen!12,below=0.55cm of psigw] (output)
+      {Off-grid channel estimate};
+    \draw[arrow] (input) -- (white);
+    \draw[arrow] (white) -- (psomp);
+    \draw[arrow] (psomp) -- (psigw);
+    \draw[arrow] (psigw) -- (output);
+  \end{tikzpicture}
+  \caption{Combined workflow of the two algorithms emphasized in the
+  group presentation.}
+  \label{fig:algorithms}
+\end{figure}
+
+\subsection{On-Grid P-SOMP}
+
+P-SOMP extends simultaneous OMP from the angular dictionary to
+$\fieldvec{W}$. It proceeds as follows:
+\begin{enumerate}
+  \item construct $\fieldvec{W}$ and pre-whiten the measurements;
+  \item initialize the residual and an empty support set;
+  \item select the polar atom with the largest summed correlation across
+  subcarriers;
+  \item estimate gains by least squares and update the residual;
+  \item repeat for the detected paths and synthesize the channel.
+\end{enumerate}
+Because $s=0$ represents infinite distance, P-SOMP also works for
+far-field paths. Its weakness is grid mismatch: real angles and distances
+are continuous and rarely coincide exactly with sampled atoms.
+
+\subsection{Off-Grid P-SIGW}
+
+P-SIGW uses P-SOMP only for initialization. It constructs a small steering
+matrix from the detected paths and minimizes the whitened reconstruction
+error
+\begin{equation}
+  \min_{\fieldvec{\theta},\fieldvec{r},\fieldvec{G}}
+  \left\|
+  \overline{\fieldvec{Y}}
+  -\widetilde{\fieldvec{\Phi}}(\fieldvec{\theta},\fieldvec{r})
+   \fieldvec{G}
+  \right\|_F^2.
+  \label{eq:psigw}
+\end{equation}
+Alternating updates refine angle and inverse distance, followed by a
+least-squares gain update. This directly estimates continuous path
+parameters and removes the resolution floor of P-SOMP.
+
+\tightsection{Trade-Off}
+
+P-SOMP is simpler but bounded by grid resolution. P-SIGW corrects off-grid
+mismatch and improves NMSE at the cost of iterative optimization.
+
+\newpage
+
+% ---------------------------------------------------------------------------
+% Page 5: Results and conclusion
 % ---------------------------------------------------------------------------
 \tightsection{Simulation Results}
 
-The simulations use the parameters in Table~\ref{tab:simulation}. With
-$M=256<N=512$, the compressed-sensing schemes use half as many pilots as
-the MMSE benchmark ($M=512$). HF-OMP is compared with far-field OMP,
-near-field OMP, and this full-dimensional benchmark.
+The distance experiment uses $N=256$ antennas, a 100 GHz carrier,
+SNR $=10$ dB, and pilot length $P=32$. The corresponding Rayleigh distance
+is about 100 m. Figure~\ref{fig:nmse-distance} redraws the principal trends
+from Fig.~10 of the paper rather than reproducing its image.
 
-\begin{table}[ht]
+\begin{figure}[ht]
   \centering
-  \caption{Principal simulation settings reported by Wei and Dai.}
-  \label{tab:simulation}
-  \renewcommand{\arraystretch}{1.1}
-  \begin{tabular}{ll@{\qquad}ll}
-    \toprule
-    BS antennas & $N=512$ & Carrier frequency & $30$ GHz \\
-    Wavelength & $\lambda=0.01$ m & Physical paths & $L=6$ \\
-    CS pilots & $M=256$ & Polar grid size & $S=2071$ \\
-    Path angle & uniform & Path distance & $10$--$80$ m \\
-    \bottomrule
-  \end{tabular}
-\end{table}
+  \begin{tikzpicture}[x=0.075cm,y=0.22cm,font=\small]
+    \draw[->] (0,0) -- (125,0) node[right] {distance (m)};
+    \draw[->] (0,-25) -- (0,1) node[above] {NMSE (dB)};
+    \foreach \x in {20,40,60,80,100,120}
+      \draw (\x,0.4) -- (\x,-0.4) node[below] {\x};
+    \foreach \y in {-5,-10,-15,-20,-25}
+      \draw (0.8,\y) -- (-0.8,\y) node[left] {\y};
+    \draw[dashed,thick] (100,0) -- (100,-25);
+    \node[rotate=90,anchor=south] at (100,-12.5) {Rayleigh distance};
 
-\subsection{NMSE versus SNR}
+    \draw[polarred,very thick]
+      plot[smooth] coordinates {(5,-19)(10,-20)(20,-20.2)(40,-20.3)
+      (60,-20.3)(80,-20.3)(100,-20.2)(120,-20.0)};
+    \draw[nearorange,thick]
+      plot[smooth] coordinates {(5,-7)(10,-10.5)(20,-12.5)(40,-14)
+      (60,-14.6)(80,-14.8)(100,-15)(120,-15)};
+    \draw[farblue,thick]
+      plot[smooth] coordinates {(5,-5)(10,-8)(20,-10.5)(40,-12.5)
+      (60,-13.5)(80,-14.2)(100,-15)(120,-15.5)};
+    \draw[darkgreen,thick,dash pattern=on 4pt off 2pt]
+      plot[smooth] coordinates {(5,-4)(10,-7)(20,-9)(40,-11)
+      (60,-12.5)(80,-13.8)(100,-15)(120,-16)};
+    \draw[gray,thick] (5,-10) -- (120,-10);
 
-For $\gamma=0.5$, HF-OMP achieves lower normalized mean-square error
-(NMSE) than either mismatched OMP baseline across the reported SNR range.
-Far-field OMP spreads spherical paths, while near-field OMP represents
-planar paths with a coherent, oversized dictionary. HF-OMP improves
-accuracy by recovering each component in its sparse domain. The MMSE curve
-is not a like-for-like low-overhead method because it uses twice as many
-pilots.
+    \node[polarred,anchor=west] at (18,-21.8) {P-SIGW};
+    \node[nearorange,anchor=west] at (55,-16.7) {P-SOMP};
+    \node[farblue,anchor=west] at (104,-17.0) {angular on-grid};
+    \node[darkgreen,anchor=west] at (67,-12.2) {angular off-grid};
+    \node[gray,anchor=west] at (103,-9.2) {LS};
+  \end{tikzpicture}
+  \caption{Trend-focused redraw of NMSE versus distance from
+  \cite[Fig.~10]{cui2022}.}
+  \label{fig:nmse-distance}
+\end{figure}
 
-\subsection{NMSE versus Field Composition}
+\tightsection{Interpretation}
 
-At 5 dB, the authors vary $\gamma$. HF-OMP matches near-field OMP at
-$\gamma=0$ and far-field OMP at $\gamma=1$, because those are its two
-endpoint cases. For mixed channels it performs better than either
-single-field estimator. Thus performance depends on modeling field
-composition, not only on the sparse-recovery algorithm.
+Inside the Rayleigh distance, angular-domain methods suffer severe model
+mismatch because a spherical path is not sparse in angle. Their NMSE
+improves only as distance increases and the wavefront becomes nearly
+planar. P-SOMP is much less sensitive to distance because its dictionary
+contains the required angle--distance atoms. P-SIGW is best because it
+also removes the polar-grid quantization error.
 
-\tightsection{Critical Assessment and Conclusion}
+The other experiments selected by the group support the same conclusion.
+As SNR increases, near-field polar methods continue improving while
+mismatched angular methods approach an error floor. Increasing pilot
+length improves all compressed-sensing estimators, but the gain is much
+larger when the representation matches the propagation physics.
 
-The hybrid model clearly exposes mismatch loss, and HF-OMP adds an
-interpretable two-stage search to standard OMP. Its limitations are the
-assumptions of known $L$ and $\gamma$, on-grid paths, and a limited
-simulation study. The large polar dictionary raises memory and computation,
-while far-first recovery can propagate errors.
+\tightsection{Conclusion}
 
-The paper establishes that XL-MIMO should not be forced into one field
-model: domain-matched recovery improves NMSE at the same low pilot
-overhead. Future work should estimate $\gamma$, refine off-grid parameters,
-use joint or Bayesian recovery, and test wideband, multi-user, and measured
-channels.
+XL-MIMO does not destroy physical channel sparsity; it destroys
+\emph{angle-only} sparsity. Uniform angle sampling on distance rings and
+nonuniform sampling in $1/r$ let $\fieldvec{W}$ concentrate spherical
+paths. P-SOMP exploits this structure with low pilot overhead, while
+P-SIGW trades extra computation for off-grid accuracy.
 
 \renewcommand{\refname}{References}
-\begin{thebibliography}{2}
+\begin{thebibliography}{1}
 \setlength{\itemsep}{0pt}
 \setlength{\parskip}{0pt}
-\small
-
-\bibitem{wei2022}
-X. Wei and L. Dai, ``Channel estimation for extremely large-scale massive
-MIMO: Far-field, near-field, or hybrid-field?'' \emph{IEEE Communications
-Letters}, vol. 26, no. 1, pp. 177--181, Jan. 2022,
-doi: 10.1109/LCOMM.2021.3124927.
+\footnotesize
 
 \bibitem{cui2022}
 M. Cui and L. Dai, ``Channel estimation for extremely large-scale MIMO:
-Far-field or near-field?'' \emph{IEEE Transactions on Communications},
-vol. 70, no. 4, pp. 2663--2677, Apr. 2022.
+Far-field or near-field?'' \emph{IEEE Trans. Commun.}, vol. 70, no. 4,
+pp. 2663--2677, Apr. 2022, doi: 10.1109/TCOMM.2022.3146400.
 
 \end{thebibliography}
 

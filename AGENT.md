@@ -61,24 +61,6 @@ because it may contain licensed or private course material.
 - Use ASCII in source comments and commands. Unicode is appropriate for the
   Chinese student names.
 
-## Build
-
-Compile with a XeTeX-compatible Tectonic engine:
-
-```powershell
-tectonic -X compile reports\pwc_final_report.tex --outdir <temporary-build-dir> --keep-logs
-```
-
-On the current development machine, a portable compiler may be available at:
-
-```text
-C:\Users\kelvi\Documents\Codex\2026-06-09\how-to-git-init-this-project\work\tectonic\tectonic.exe
-```
-
-Compile at least twice after substantial changes. Build into a temporary
-directory, verify the output, and then copy only the final PDF to
-`reports/pwc_final_report.pdf`.
-
 ## Verification Checklist
 
 Before committing:

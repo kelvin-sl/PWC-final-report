@@ -1,0 +1,214 @@
+\documentclass[12pt,a4paper]{article}
+
+\usepackage[margin=1in]{geometry}
+\usepackage{amsmath,amssymb}
+\usepackage{booktabs}
+\usepackage{graphicx}
+\usepackage{hyperref}
+\usepackage{microtype}
+\usepackage{xcolor}
+
+\hypersetup{
+  colorlinks=true,
+  linkcolor=blue,
+  citecolor=blue,
+  urlcolor=blue
+}
+
+\title{Channel Estimation for Extremely Large-Scale Massive MIMO:\\
+Far-Field, Near-Field, or Hybrid-Field?}
+\author{Kelvin}
+\date{\today}
+
+\begin{document}
+
+\maketitle
+
+\begin{abstract}
+Extremely large-scale massive multiple-input multiple-output (XL-MIMO)
+systems provide high array gain and spatial resolution, but their large
+apertures invalidate the conventional far-field plane-wave assumption for
+many users. This report reviews channel estimation under far-field,
+near-field, and hybrid-field propagation models. It summarizes the main
+modeling assumptions, compares representative estimation approaches, and
+discusses the trade-offs among accuracy, pilot overhead, and computational
+complexity.
+\end{abstract}
+
+\tableofcontents
+\newpage
+
+\section{Introduction}
+
+Massive MIMO improves spectral and energy efficiency by using a large
+antenna array to serve multiple users simultaneously. In XL-MIMO systems,
+the physical aperture becomes sufficiently large that some users or
+scatterers may lie inside the array's Rayleigh distance. Their channels
+therefore exhibit spherical wavefronts and depend on both angle and
+distance, rather than angle alone.
+
+This report focuses on the following questions:
+\begin{itemize}
+  \item When are far-field and near-field channel models appropriate?
+  \item How can a system estimate channels containing both propagation types?
+  \item What are the main performance and complexity trade-offs?
+\end{itemize}
+
+\section{System Model}
+
+Consider a base station equipped with a uniform linear array of $M$
+antennas. The received pilot signal can be written as
+\begin{equation}
+  \mathbf{y} = \mathbf{X}\mathbf{h} + \mathbf{n},
+\end{equation}
+where $\mathbf{X}$ is the pilot matrix, $\mathbf{h}$ is the channel vector,
+and $\mathbf{n}$ is additive noise.
+
+\subsection{Far-Field Model}
+
+In the far field, the wavefront is approximated as planar. A path is
+characterized primarily by its angle of arrival, and the steering vector
+for a uniform linear array is
+\begin{equation}
+  \mathbf{a}_{\mathrm{FF}}(\theta)
+  =
+  \frac{1}{\sqrt{M}}
+  \begin{bmatrix}
+    1 &
+    e^{-j 2\pi \frac{d}{\lambda}\sin\theta} &
+    \cdots &
+    e^{-j 2\pi \frac{d}{\lambda}(M-1)\sin\theta}
+  \end{bmatrix}^{T}.
+\end{equation}
+
+\subsection{Near-Field Model}
+
+In the near field, the spherical wavefront must be retained. The response
+depends on both the angle $\theta$ and distance $r$:
+\begin{equation}
+  \left[\mathbf{a}_{\mathrm{NF}}(r,\theta)\right]_m
+  =
+  \frac{1}{\sqrt{M}}
+  e^{-j\frac{2\pi}{\lambda}(r_m-r)},
+\end{equation}
+where $r_m$ is the distance from the source to antenna $m$.
+
+\subsection{Hybrid-Field Model}
+
+A practical XL-MIMO channel may contain far-field and near-field paths:
+\begin{equation}
+  \mathbf{h}
+  =
+  \sum_{\ell=1}^{L_{\mathrm{FF}}}
+    \alpha_{\ell}\mathbf{a}_{\mathrm{FF}}(\theta_{\ell})
+  +
+  \sum_{k=1}^{L_{\mathrm{NF}}}
+    \beta_{k}\mathbf{a}_{\mathrm{NF}}(r_k,\theta_k).
+\end{equation}
+This hybrid model motivates dictionaries or estimators that jointly
+represent angular and polar-domain sparsity.
+
+\section{Channel Estimation Methods}
+
+\subsection{Least-Squares Estimation}
+
+The least-squares estimate is
+\begin{equation}
+  \widehat{\mathbf{h}}_{\mathrm{LS}}
+  =
+  \left(\mathbf{X}^{H}\mathbf{X}\right)^{-1}
+  \mathbf{X}^{H}\mathbf{y}.
+\end{equation}
+It is simple and does not require channel statistics, but it generally
+requires substantial pilot overhead and can be sensitive to noise.
+
+\subsection{Sparse Far-Field Estimation}
+
+Far-field channels are often sparse in an angular discrete Fourier
+transform dictionary. Compressed-sensing algorithms such as orthogonal
+matching pursuit can exploit this sparsity to reduce pilot overhead.
+
+\subsection{Sparse Near-Field Estimation}
+
+Near-field estimation uses a polar-domain dictionary indexed by angle and
+distance. This model improves accuracy for spherical wavefronts, at the
+cost of a larger search space and higher dictionary coherence.
+
+\subsection{Hybrid-Field Estimation}
+
+Hybrid-field methods combine angular and polar-domain representations.
+A practical estimator must determine whether each significant component
+is better represented by a far-field or near-field atom while avoiding
+duplicate or highly correlated selections.
+
+\section{Comparison and Discussion}
+
+\begin{table}[ht]
+  \centering
+  \caption{Qualitative comparison of propagation models.}
+  \label{tab:comparison}
+  \begin{tabular}{@{}llll@{}}
+    \toprule
+    Model & Parameters per path & Main advantage & Main limitation \\
+    \midrule
+    Far field & Angle & Low complexity & Near-field mismatch \\
+    Near field & Angle and distance & Accurate spherical model & Large dictionary \\
+    Hybrid field & Model, angle, distance & Broad applicability & Highest complexity \\
+    \bottomrule
+  \end{tabular}
+\end{table}
+
+The preferred model depends on array aperture, carrier wavelength, user
+distance, scattering geometry, and available computational resources.
+Model mismatch can produce a high error floor even when the signal-to-noise
+ratio is large. Conversely, using a full near-field or hybrid-field model
+for every user may introduce unnecessary complexity.
+
+\section{Simulation Setup and Results}
+
+Replace this section with the parameters and results used in the project.
+A useful evaluation should report the normalized mean-square error
+\begin{equation}
+  \mathrm{NMSE}
+  =
+  \mathbb{E}\left[
+    \frac{\lVert\mathbf{h}-\widehat{\mathbf{h}}\rVert_2^2}
+         {\lVert\mathbf{h}\rVert_2^2}
+  \right],
+\end{equation}
+as a function of signal-to-noise ratio, pilot length, user distance, or
+the fraction of near-field paths.
+
+% Example figure:
+% \begin{figure}[ht]
+%   \centering
+%   \includegraphics[width=0.75\linewidth]{figures/nmse.pdf}
+%   \caption{NMSE performance versus SNR.}
+%   \label{fig:nmse}
+% \end{figure}
+
+\section{Conclusion}
+
+XL-MIMO channel estimation requires propagation-aware modeling. Far-field
+methods remain efficient for sufficiently distant users, while near-field
+methods capture the distance-dependent structure introduced by spherical
+wavefronts. Hybrid-field estimation provides a flexible solution when both
+types of paths coexist, but its practical value depends on controlling
+pilot overhead and computational complexity.
+
+\begin{thebibliography}{9}
+
+\bibitem{xlmimo_survey}
+Insert the complete citation for the main XL-MIMO channel-estimation paper
+used in this report.
+
+\bibitem{massive_mimo}
+T.~L. Marzetta,
+``Noncooperative cellular wireless with unlimited numbers of base station
+antennas,''
+\emph{IEEE Transactions on Wireless Communications},
+vol.~9, no.~11, pp.~3590--3600, 2010.
+
+\end{thebibliography}
+
+\end{document}

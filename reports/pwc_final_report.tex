@@ -346,33 +346,6 @@ model
 The rows of $\fieldvec{H}^{P}$ share a common sparse support because path
 angles and distances are common across subcarriers.
 
-\begin{figure}[ht]
-  \centering
-  \begin{tikzpicture}[
-      >=Latex,
-      box/.style={draw,rounded corners,minimum width=4.6cm,
-                  minimum height=0.5cm,align=center,font=\footnotesize},
-      arrow/.style={->,thick}
-    ]
-    \node[box,fill=softgray] (input) at (0,0)
-      {Pilots, combiner, and polar dictionary};
-    \node[box,fill=farblue!10,below=0.24cm of input] (white)
-      {Pre-whiten observations and sensing matrix};
-    \node[box,fill=farblue!14,below=0.24cm of white] (psomp)
-      {P-SOMP: support search, least squares,\\residual update, channel synthesis};
-    \node[box,fill=nearorange!13,right=0.55cm of psomp] (psigw)
-      {P-SIGW: initialize from P-SOMP,\\refine angle, distance, and gain};
-    \node[box,fill=darkgreen!12,below=0.38cm of psigw] (output)
-      {Off-grid channel estimate};
-    \draw[arrow] (input) -- (white);
-    \draw[arrow] (white) -- (psomp);
-    \draw[arrow] (psomp) -- (psigw);
-    \draw[arrow] (psigw) -- (output);
-  \end{tikzpicture}
-  \caption{Combined workflow of the P-SOMP and P-SIGW algorithms.}
-  \label{fig:algorithms}
-\end{figure}
-
 \subsection{On-Grid P-SOMP}
 
 P-SOMP extends simultaneous OMP from the angular dictionary to
@@ -513,10 +486,10 @@ accurate than the planar-wave one. Increasing pilot length improves all
 compressed-sensing estimators, but the gain is much larger when the
 representation matches the propagation physics.
 
-\newpage
+\bigskip
 
 % ---------------------------------------------------------------------------
-% Page 6: Q&A
+% Q&A (continues on the same page as Interpretation)
 % ---------------------------------------------------------------------------
 \section*{Q\&A}
 \addcontentsline{toc}{section}{Q\&A}

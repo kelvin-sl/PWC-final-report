@@ -516,10 +516,75 @@ representation matches the propagation physics.
 \newpage
 
 % ---------------------------------------------------------------------------
-% Page 6: reserved Q&A
+% Page 6: Q&A
 % ---------------------------------------------------------------------------
 \section*{Q\&A}
 \addcontentsline{toc}{section}{Q\&A}
+
+\noindent\textbf{Question.}\enspace
+While these two algorithms enhance performance, do they also introduce
+higher computational complexity compared to existing works?
+Furthermore, where does the primary complexity bound lie?
+
+\vspace{0.9em}
+\noindent\textbf{Answer.}
+
+\vspace{0.4em}
+\noindent\textit{1.~Do they introduce higher computational complexity?}
+
+\begin{itemize}
+  \item \textbf{P-SOMP:} Overall complexity
+    $\mathcal{O}(\hat{L}PN_{\mathrm{RF}}NSM)$.
+    Compared to the far-field on-grid algorithm SWOMP, its complexity is
+    $S$ times that of SWOMP, where $S$ is the number of sampled distance
+    rings.
+
+  \item \textbf{P-SIGW:} Overall complexity
+    $\mathcal{O}\!\bigl(\hat{L}PN_{\mathrm{RF}}NSM
+      +N_{\mathrm{iter}}(P^{2}N_{\mathrm{RF}}^{2}M
+        +PN_{\mathrm{RF}}M^{2})\bigr)$.
+    Compared to the far-field off-grid algorithm SS-SIGW-OLS,
+    \textbf{the refinement-stage complexity is exactly the same}.
+    The extra cost comes solely from the initialization stage, which runs
+    P-SOMP and thus carries the same $S$-fold overhead.
+\end{itemize}
+
+\noindent
+\textbf{Summary:} Although higher complexity is introduced, the
+non-uniform distance-sampling method is highly efficient---$S$ is
+generally very small (4 to 6 in the simulations)---so this overhead is
+acceptable.
+
+\vspace{0.9em}
+\noindent\textit{2.~Where does the primary complexity bound lie?}
+
+\begin{itemize}
+  \item \textbf{P-SOMP bottleneck.}
+    The dominant operation is computing the correlation matrix
+    $\boldsymbol{\Gamma}=\bar{\boldsymbol{\Psi}}^{H}\mathbf{R}$ at
+    each of the $\hat{L}$ iterations.
+    Because XL-MIMO makes $N$ very large and the polar-domain grid
+    covers both angle and distance, the transform matrix
+    $\bar{\boldsymbol{\Psi}}\in\mathbb{C}^{PN_{\mathrm{RF}}\times NS}$
+    has $NS$ columns.
+    The bottleneck is therefore
+    $\mathcal{O}(\hat{L}PN_{\mathrm{RF}}NSM)$,
+    the product of paths $\hat{L}$, pilot length $P$, RF chains
+    $N_{\mathrm{RF}}$, polar-domain grid size $NS$, and subcarriers $M$.
+
+  \item \textbf{P-SIGW bottleneck.}
+    The refinement stage dominates because $\hat{L}$ is small.
+    Each iteration computes the gradients of the objective with respect
+    to the angles $\hat{\boldsymbol{\theta}}$ and distances $\hat{\mathbf{r}}$,
+    whose cost is $\mathcal{O}(P^{2}N_{\mathrm{RF}}^{2}M
+    +PN_{\mathrm{RF}}M^{2})$ per iteration.
+    After $N_{\mathrm{iter}}$ iterations the refinement cost is
+    $\mathcal{O}\!\bigl(N_{\mathrm{iter}}(P^{2}N_{\mathrm{RF}}^{2}M
+      +PN_{\mathrm{RF}}M^{2})\bigr)$.
+    The two terms grow quadratically with the effective observation
+    dimension $PN_{\mathrm{RF}}$ and with the subcarrier count $M$,
+    respectively.
+\end{itemize}
 
 \noindent
 \textit{This page is reserved for questions and answers. Replace the

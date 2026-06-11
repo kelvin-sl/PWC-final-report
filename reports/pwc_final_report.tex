@@ -14,7 +14,11 @@
 \usetikzlibrary{arrows.meta,positioning,shapes.geometric}
 
 \setmainfont{Times New Roman}
-\newfontfamily\chinesefont{Microsoft JhengHei}
+% Prefer Microsoft JhengHei per the report requirements; fall back to
+% Heiti TC when compiling on a machine without the Microsoft font.
+\IfFontExistsTF{Microsoft JhengHei}
+  {\newfontfamily\chinesefont{Microsoft JhengHei}}
+  {\newfontfamily\chinesefont{Heiti TC}}
 \singlespacing
 \setlength{\parindent}{1.5em}
 \setlength{\parskip}{0pt}
@@ -130,23 +134,26 @@ sparsity.
 % ---------------------------------------------------------------------------
 \tightsection{Near-Field Channel Model}
 
-For a uniform linear array with centered antenna index $n$, spacing $d$,
-and wavenumber $k_c=2\pi/\lambda$, the near-field steering vector is
+For a uniform linear array with antenna index $n=0,1,\ldots,N-1$,
+spacing $d$, and wavenumber $k_c=2\pi/\lambda$, the near-field steering
+vector is
 \begin{equation}
   \fieldvec{b}(\theta,r)
   =\frac{1}{\sqrt{N}}
   \left[e^{-jk_c(r^{(0)}-r)},\ldots,
-        e^{-jk_c(r^{(N-1)}-r)}\right]^{H},
+        e^{-jk_c(r^{(N-1)}-r)}\right]^{T},
   \label{eq:steering}
 \end{equation}
 where
 \begin{equation}
-  r^{(n)}=\sqrt{r^2+n^2d^2-2rnd\theta}
+  r^{(n)}=\sqrt{r^2+\delta_n^2d^2-2r\delta_n d\theta},
+  \qquad \delta_n=\frac{2n-N+1}{2},
   \label{eq:distance}
 \end{equation}
-is the distance between the source and antenna $n$. Unlike a Fourier
-vector, Equation~\eqref{eq:steering} has a nonlinear phase progression
-that changes with both $\theta$ and $r$.
+is the distance between the source and the $n$-th antenna located at
+$\delta_n d$, and $\theta\in[-1,1]$ is the spatial angle. Unlike a
+Fourier vector, Equation~\eqref{eq:steering} has a nonlinear phase
+progression that changes with both $\theta$ and $r$.
 
 With a limited number of paths, the channel remains compressible even
 though it is not sparse in angle. The proposed representation is
@@ -192,7 +199,7 @@ are shared across subcarriers, which enables simultaneous recovery.
     \end{scope}
   \end{tikzpicture}
   \caption{Energy spread and polar sparsity, adapted from
-  Fig.~8 of \cite{cui2022}.}
+  Figs.~2 and~8 of \cite{cui2022}.}
   \label{fig:sparsity}
 \end{figure}
 
@@ -227,7 +234,7 @@ The exact spherical distance makes direct grid design difficult. The
 Fresnel approximation separates its phase into
 \begin{equation}
   r^{(n)}-r
-  \approx -nd\theta+\frac{n^2d^2(1-\theta^2)}{2r}.
+  \approx -\delta_n d\theta+\frac{\delta_n^2d^2(1-\theta^2)}{2r}.
   \label{eq:fresnel}
 \end{equation}
 The linear term describes angle; the quadratic term contains the coupled
@@ -423,21 +430,21 @@ from Fig.~10 of the paper rather than reproducing its image.
       plot[smooth] coordinates {(5,-19)(10,-20)(20,-20.2)(40,-20.3)
       (60,-20.3)(80,-20.3)(100,-20.2)(120,-20.0)};
     \draw[nearorange,thick]
-      plot[smooth] coordinates {(5,-7)(10,-10.5)(20,-12.5)(40,-14)
-      (60,-14.6)(80,-14.8)(100,-15)(120,-15)};
+      plot[smooth] coordinates {(5,-13)(10,-14)(20,-14.5)(40,-14.8)
+      (60,-15)(80,-15)(100,-15)(120,-15)};
     \draw[farblue,thick]
       plot[smooth] coordinates {(5,-5)(10,-8)(20,-10.5)(40,-12.5)
       (60,-13.5)(80,-14.2)(100,-15)(120,-15.5)};
     \draw[darkgreen,thick,dash pattern=on 4pt off 2pt]
       plot[smooth] coordinates {(5,-4)(10,-7)(20,-9)(40,-11)
       (60,-12.5)(80,-13.8)(100,-15)(120,-16)};
-    \draw[gray,thick] (5,-10) -- (120,-10);
+    \draw[gray,thick] (5,-2.5) -- (120,-2.5);
 
     \node[polarred,anchor=west] at (18,-21.8) {P-SIGW};
     \node[nearorange,anchor=west] at (55,-16.7) {P-SOMP};
     \node[farblue,anchor=west] at (104,-17.0) {angular on-grid};
     \node[darkgreen,anchor=west] at (67,-12.2) {angular off-grid};
-    \node[gray,anchor=west] at (103,-9.2) {LS};
+    \node[gray,anchor=west] at (103,-4.0) {LS};
   \end{tikzpicture}
   \caption{Trend-focused redraw of NMSE versus distance from
   \cite[Fig.~10]{cui2022}.}
@@ -455,9 +462,12 @@ also removes the polar-grid quantization error.
 
 The other experiments selected by the group support the same conclusion.
 As SNR increases, near-field polar methods continue improving while
-mismatched angular methods approach an error floor. Increasing pilot
-length improves all compressed-sensing estimators, but the gain is much
-larger when the representation matches the propagation physics.
+mismatched angular methods approach an error floor. In the far-field
+setting, the polar methods match the angular baselines and become
+slightly better at high SNR, because the Fresnel approximation is more
+accurate than the planar-wave one. Increasing pilot length improves all
+compressed-sensing estimators, but the gain is much larger when the
+representation matches the propagation physics.
 
 \tightsection{Conclusion}
 

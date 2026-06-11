@@ -10,6 +10,7 @@
 \usepackage{microtype}
 \usepackage{tikz}
 \usepackage{xcolor}
+\usepackage{graphicx}
 \usepackage{hyperref}
 \usetikzlibrary{arrows.meta,positioning,shapes.geometric}
 
@@ -120,13 +121,6 @@ $\fieldvec{a}(\theta)$ is sufficient. Near-field phase also depends on
 distance and requires $\fieldvec{b}(\theta,r)$. An angle-only dictionary
 therefore spreads one physical near-field path over many bins.
 
-\tightsection{Paper Contributions}
-
-The paper restores sparsity with a polar dictionary that samples angle and
-distance, then proposes P-SOMP for on-grid recovery and P-SIGW for off-grid
-refinement. The key question is which coordinates preserve physical
-sparsity.
-
 \newpage
 
 % ---------------------------------------------------------------------------
@@ -154,6 +148,39 @@ is the distance between the source and the $n$-th antenna located at
 $\delta_n d$, and $\theta\in[-1,1]$ is the spatial angle. Unlike a
 Fourier vector, Equation~\eqref{eq:steering} has a nonlinear phase
 progression that changes with both $\theta$ and $r$.
+
+Figure~\ref{fig:channel-model} illustrates the system architecture. The
+$N$-element antenna array receives signals from scatterers in the near
+field. An analog combining matrix $\fieldvec{A}\in\mathbb{C}^{N_{\mathrm{RF}}\times N}$
+reduces the $N$ antenna outputs to $N_{\mathrm{RF}}$ RF chains, producing the
+observation $\overline{\fieldvec{Y}}$. The polar-domain transform matrix
+$\fieldvec{W}$ maps the sparse representation $\fieldvec{H}^{P}$ back to
+the antenna domain. Because the number of RF chains is much smaller than
+$N$, compressed sensing is needed to recover the channel from few pilots.
+
+\begin{figure}[ht]
+  \centering
+  \includegraphics[width=0.78\textwidth]{../photos/channel_model.png}
+  \caption{System model: the $N$-element array, analog combiner
+  $\fieldvec{A}$, RF chains, and polar-domain transform $\fieldvec{W}$.}
+  \label{fig:channel-model}
+\end{figure}
+
+Figure~\ref{fig:polar-domain} shows the polar-domain representation in
+physical coordinates. Each elliptical contour corresponds to a distance
+ring on which angles are sampled uniformly. The steering vector
+$\fieldvec{b}(\theta_n,r_n)$ points to a specific angle--distance pair.
+Closer rings are spaced more densely because the sampling is uniform in
+inverse distance $1/r$, which ensures low mutual coherence between
+adjacent columns of $\fieldvec{W}$.
+
+\begin{figure}[ht]
+  \centering
+  \includegraphics[width=0.48\textwidth]{../photos/Polar_domain.png}
+  \caption{The polar-domain representation: distance rings and steering
+  vectors $\fieldvec{b}(\theta_n,r_n)$, adapted from \cite{cui2022}.}
+  \label{fig:polar-domain}
+\end{figure}
 
 With a limited number of paths, the channel remains compressible even
 though it is not sparse in angle. The proposed representation is
@@ -209,19 +236,6 @@ a near-field path occupies many bins. In the polar domain, each path is
 represented by an angle--distance pair and the channel again contains only
 a few significant coefficients. This restored sparsity is what makes
 low-pilot compressed sensing practical.
-
-\tightsection{Dictionary Design Objective}
-
-The polar grid should not contain highly similar columns. The paper
-therefore designs its samples to reduce
-\begin{equation}
-  \mu=\max_{p\neq q}
-  \left|\fieldvec{b}^{H}(\theta_p,r_p)
-              \fieldvec{b}(\theta_q,r_q)\right|,
-  \label{eq:coherence}
-\end{equation}
-because lower coherence improves the reliability of sparse support
-detection.
 
 \newpage
 
@@ -381,26 +395,63 @@ are continuous and rarely coincide exactly with sampled atoms.
 
 \subsection{Off-Grid P-SIGW}
 
-P-SIGW uses P-SOMP only for initialization. It constructs a small steering
-matrix from the detected paths and minimizes the whitened reconstruction
-error
+P-SIGW performs off-grid near-field channel estimation. Its optimization
+target is
 \begin{equation}
-  \min_{\fieldvec{\theta},\fieldvec{r},\fieldvec{G}}
-  \left\|
-  \overline{\fieldvec{Y}}
-  -\widetilde{\fieldvec{\Phi}}(\fieldvec{\theta},\fieldvec{r})
-   \fieldvec{G}
-  \right\|_F^2.
+  \min_{\hat{\fieldvec{\theta}},\hat{\fieldvec{r}}}
+  \mathcal{L}(\hat{\fieldvec{\theta}},\hat{\fieldvec{r}})
+  =-\mathrm{Tr}\!\left\{
+  \overline{\fieldvec{Y}}^{H}
+  \fieldvec{P}(\hat{\fieldvec{\theta}},\hat{\fieldvec{r}})
+  \overline{\fieldvec{Y}}\right\},
   \label{eq:psigw}
 \end{equation}
-Alternating updates refine angle and inverse distance, followed by a
-least-squares gain update. This directly estimates continuous path
-parameters and removes the resolution floor of P-SOMP.
+and the algorithm proceeds in three phases.
 
-\tightsection{Trade-Off}
+\textbf{Phase 1: Initialization.}
+Obtain the initial distances
+$\hat{\fieldvec{r}}^{0}=[\hat{r}_1^0,\hat{r}_2^0,\ldots,\hat{r}_{\hat{L}}^0]$
+and angles
+$\hat{\fieldvec{\theta}}^{0}=[\hat{\theta}_1^0,\hat{\theta}_2^0,\ldots,\hat{\theta}_{\hat{L}}^0]$
+from P-SOMP, then compute the polar-domain gain
+$\hat{\fieldvec{G}}=\hat{\fieldvec{H}}_r^{\mathcal{P}}$ and grid
+$\hat{\fieldvec{r}}^{0}$, $\hat{\fieldvec{\theta}}^{0}$.
 
-P-SOMP is simpler but bounded by grid resolution. P-SIGW corrects off-grid
-mismatch and improves NMSE at the cost of iterative optimization.
+\textbf{Phase 2: Refinement.}
+For $n=1,2,\ldots,N_{\mathrm{iter}}$, update angle and distance
+separately using Armijo backtracking line search:
+\begin{equation}
+  \hat{\theta}^{n}=\hat{\theta}^{n-1}
+  -l_1\nabla_{\hat{\theta}}
+  \mathcal{L}(\hat{\theta},\hat{r}^{n-1})
+  \big|_{\hat{\theta}=\hat{\theta}^{n-1}},
+  \label{eq:angle-update}
+\end{equation}
+\begin{equation}
+  \frac{1}{\hat{r}^{n}}=\frac{1}{\hat{r}^{n-1}}
+  -l_2\nabla_{\frac{1}{\hat{r}}}
+  \mathcal{L}(\hat{\theta}^{n},\hat{r})
+  \big|_{\hat{r}=\hat{r}^{n-1}},
+  \label{eq:distance-update}
+\end{equation}
+where $l_1$ and $l_2$ are the step lengths chosen by the Armijo rule.
+After each iteration, update the path gains via
+\begin{equation}
+  \hat{\fieldvec{G}}^{\mathrm{opt}}
+  =\widetilde{\fieldvec{\Psi}}^{\dagger}
+  (\hat{\fieldvec{\theta}},\hat{\fieldvec{r}})
+  \overline{\fieldvec{Y}}.
+  \label{eq:gain-update}
+\end{equation}
+
+\textbf{Phase 3: Channel synthesis.}
+Construct the estimated channel as
+$\hat{\fieldvec{H}}
+=[\fieldvec{b}(\hat{\theta}_1^n,\hat{r}_1^n),
+   \fieldvec{b}(\hat{\theta}_2^n,\hat{r}_2^n),\ldots,
+   \fieldvec{b}(\hat{\theta}_{\hat{L}}^n,\hat{r}_{\hat{L}}^n)]
+ \hat{\fieldvec{G}}^n$
+and return $\hat{\fieldvec{H}}$.
 
 \newpage
 

@@ -79,7 +79,7 @@ coefficient would therefore require excessive pilot overhead.
 Compressed sensing reduces this overhead by assuming that only a few paths
 are active in an angular Fourier dictionary. Cui and Dai show that this
 assumption breaks down when the XL-MIMO aperture places users or scatterers
-in the near field \cite{cui2022}.
+in the near field.
 
 \tightsection{Far-Field and Near-Field Propagation}
 
@@ -211,8 +211,7 @@ are shared across subcarriers, which enables simultaneous recovery.
       \node[polarred] at (3.7,1.03) {few physical paths};
     \end{scope}
   \end{tikzpicture}
-  \caption{Energy spread and polar sparsity, adapted from
-  Figs.~2 and~8 of \cite{cui2022}.}
+  \caption{Energy spread and polar sparsity.}
   \label{fig:sparsity}
 \end{figure}
 
@@ -243,7 +242,7 @@ quantity $(1-\theta^2)/r$. This yields the two sampling rules below.
   \includegraphics[width=0.40\textwidth]{../photos/Polar_domain.png}
   \caption{The polar-domain grid produced by the design: distance rings
   with uniformly sampled angles and steering vectors
-  $\fieldvec{b}(\theta_n,r_n)$, adapted from \cite{cui2022}.}
+  $\fieldvec{b}(\theta_n,r_n)$.}
   \label{fig:polar-domain}
 \end{figure}
 
@@ -492,8 +491,7 @@ from Fig.~10 of the paper rather than reproducing its image.
     \node[darkgreen,anchor=west] at (67,-12.2) {angular off-grid};
     \node[gray,anchor=west] at (103,-4.0) {LS};
   \end{tikzpicture}
-  \caption{Trend-focused redraw of NMSE versus distance from
-  \cite[Fig.~10]{cui2022}.}
+  \caption{Trend-focused redraw of NMSE versus distance.}
   \label{fig:nmse-distance}
 \end{figure}
 
@@ -514,19 +512,6 @@ slightly better at high SNR, because the Fresnel approximation is more
 accurate than the planar-wave one. Increasing pilot length improves all
 compressed-sensing estimators, but the gain is much larger when the
 representation matches the propagation physics.
-
-\renewcommand{\refname}{References}
-\begin{thebibliography}{1}
-\setlength{\itemsep}{0pt}
-\setlength{\parskip}{0pt}
-\footnotesize
-
-\bibitem{cui2022}
-M. Cui and L. Dai, ``Channel estimation for extremely large-scale MIMO:
-Far-field or near-field?'' \emph{IEEE Trans. Commun.}, vol. 70, no. 4,
-pp. 2663--2677, Apr. 2022, doi: 10.1109/TCOMM.2022.3146400.
-
-\end{thebibliography}
 
 \newpage
 

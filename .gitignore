@@ -3,3 +3,8 @@ doc/
 *.aux
 *.log
 *.out
+*.fdb_latexmk
+*.fls
+*.xdv
+*.synctex.gz
+*.pdf.zip

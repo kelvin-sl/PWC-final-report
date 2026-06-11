@@ -1,3 +1,6 @@
+% !TEX program = xelatex
+% Requires XeLaTeX (or LuaLaTeX): this document uses fontspec/system fonts
+% and will NOT compile with pdflatex.
 \documentclass[12pt,a4paper]{article}
 
 \usepackage[a4paper,margin=1in]{geometry}
@@ -112,7 +115,8 @@ region extending over a large part of a cell.
       {planar wave\\angle $\theta$ only};
     \node[note] at (7.7,-0.9) {Rayleigh boundary};
   \end{tikzpicture}
-  \caption{Propagation models emphasized in the group presentation.}
+  \caption{Far-field (planar-wave) and near-field (spherical-wave)
+  propagation separated by the Rayleigh boundary.}
   \label{fig:fields}
 \end{figure}
 
@@ -121,10 +125,8 @@ $\fieldvec{a}(\theta)$ is sufficient. Near-field phase also depends on
 distance and requires $\fieldvec{b}(\theta,r)$. An angle-only dictionary
 therefore spreads one physical near-field path over many bins.
 
-\newpage
-
 % ---------------------------------------------------------------------------
-% Page 2: Polar-domain representation
+% Near-field channel model (content flows continuously; no forced page break)
 % ---------------------------------------------------------------------------
 \tightsection{Near-Field Channel Model}
 
@@ -160,26 +162,10 @@ $N$, compressed sensing is needed to recover the channel from few pilots.
 
 \begin{figure}[ht]
   \centering
-  \includegraphics[width=0.78\textwidth]{../photos/channel_model.png}
+  \includegraphics[width=0.60\textwidth]{../photos/channel_model.png}
   \caption{System model: the $N$-element array, analog combiner
   $\fieldvec{A}$, RF chains, and polar-domain transform $\fieldvec{W}$.}
   \label{fig:channel-model}
-\end{figure}
-
-Figure~\ref{fig:polar-domain} shows the polar-domain representation in
-physical coordinates. Each elliptical contour corresponds to a distance
-ring on which angles are sampled uniformly. The steering vector
-$\fieldvec{b}(\theta_n,r_n)$ points to a specific angle--distance pair.
-Closer rings are spaced more densely because the sampling is uniform in
-inverse distance $1/r$, which ensures low mutual coherence between
-adjacent columns of $\fieldvec{W}$.
-
-\begin{figure}[ht]
-  \centering
-  \includegraphics[width=0.48\textwidth]{../photos/Polar_domain.png}
-  \caption{The polar-domain representation: distance rings and steering
-  vectors $\fieldvec{b}(\theta_n,r_n)$, adapted from \cite{cui2022}.}
-  \label{fig:polar-domain}
 \end{figure}
 
 With a limited number of paths, the channel remains compressible even
@@ -197,7 +183,7 @@ are shared across subcarriers, which enables simultaneous recovery.
 
 \begin{figure}[ht]
   \centering
-  \begin{tikzpicture}[x=0.72cm,y=2.2cm,font=\small,scale=0.95,transform shape]
+  \begin{tikzpicture}[x=0.66cm,y=1.85cm,font=\small,scale=0.82,transform shape]
     % Left axes
     \draw[->] (0,0) -- (7.2,0) node[right] {angle};
     \draw[->] (0,0) -- (0,1.15) node[above] {magnitude};
@@ -230,17 +216,15 @@ are shared across subcarriers, which enables simultaneous recovery.
   \label{fig:sparsity}
 \end{figure}
 
-Figure~\ref{fig:sparsity} captures the key motivation selected by the
-group. In the angular domain, a far-field path forms a narrow peak, while
+Figure~\ref{fig:sparsity} captures the key motivation. In the angular
+domain, a far-field path forms a narrow peak, while
 a near-field path occupies many bins. In the polar domain, each path is
 represented by an angle--distance pair and the channel again contains only
 a few significant coefficients. This restored sparsity is what makes
 low-pilot compressed sensing practical.
 
-\newpage
-
 % ---------------------------------------------------------------------------
-% Page 3: Transform matrix W
+% Transform matrix W
 % ---------------------------------------------------------------------------
 \tightsection{Design of the Polar-Domain Matrix \texorpdfstring{$W$}{W}}
 
@@ -252,10 +236,26 @@ Fresnel approximation separates its phase into
   \label{eq:fresnel}
 \end{equation}
 The linear term describes angle; the quadratic term contains the coupled
-quantity $(1-\theta^2)/r$. This yields the two sampling rules emphasized in
-slides 9--17.
+quantity $(1-\theta^2)/r$. This yields the two sampling rules below.
 
-\tightsection{Angular Sampling on Distance Rings}
+\begin{figure}[ht]
+  \centering
+  \includegraphics[width=0.40\textwidth]{../photos/Polar_domain.png}
+  \caption{The polar-domain grid produced by the design: distance rings
+  with uniformly sampled angles and steering vectors
+  $\fieldvec{b}(\theta_n,r_n)$, adapted from \cite{cui2022}.}
+  \label{fig:polar-domain}
+\end{figure}
+
+Figure~\ref{fig:polar-domain} shows the resulting polar-domain grid in
+physical coordinates. Each elliptical contour corresponds to a distance
+ring on which angles are sampled uniformly. The steering vector
+$\fieldvec{b}(\theta_n,r_n)$ points to a specific angle--distance pair.
+Closer rings are spaced more densely because the sampling is uniform in
+inverse distance $1/r$, which ensures low mutual coherence between
+adjacent columns of $\fieldvec{W}$.
+
+\subsection{Angular Sampling on Distance Rings}
 
 Locations satisfying
 \begin{equation}
@@ -271,7 +271,7 @@ far-field Fourier dictionary. Therefore the angles are sampled uniformly:
   \label{eq:angle-sampling}
 \end{equation}
 
-\tightsection{Nonuniform Distance Sampling}
+\subsection{Nonuniform Distance Sampling}
 
 For vectors at the same angle, coherence depends on the difference between
 inverse distances. To keep adjacent columns below a chosen coherence
@@ -315,7 +315,7 @@ not uniformly in metres.
   \label{fig:rings}
 \end{figure}
 
-\tightsection{Matrix Construction}
+\subsection{Matrix Construction}
 
 Each ring produces
 \begin{equation}
@@ -327,10 +327,8 @@ and $\fieldvec{W}=[\fieldvec{W}_0,\ldots,\fieldvec{W}_{S-1}]
 \in\mathbb{C}^{N\times NS}$. The $s=0$ far-field ring makes the Fourier
 dictionary a special case.
 
-\newpage
-
 % ---------------------------------------------------------------------------
-% Page 4: Algorithms
+% Algorithms
 % ---------------------------------------------------------------------------
 \tightsection{Near-Field Channel Estimation Algorithms}
 
@@ -354,26 +352,25 @@ angles and distances are common across subcarriers.
   \begin{tikzpicture}[
       >=Latex,
       box/.style={draw,rounded corners,minimum width=5.55cm,
-                  minimum height=0.78cm,align=center,font=\small},
+                  minimum height=0.58cm,align=center,font=\small},
       arrow/.style={->,thick}
     ]
     \node[box,fill=softgray] (input) at (0,0)
       {Pilots, combiner, and polar dictionary};
-    \node[box,fill=farblue!10,below=0.35cm of input] (white)
+    \node[box,fill=farblue!10,below=0.24cm of input] (white)
       {Pre-whiten observations and sensing matrix};
-    \node[box,fill=farblue!14,below=0.35cm of white] (psomp)
+    \node[box,fill=farblue!14,below=0.24cm of white] (psomp)
       {P-SOMP: support search, least squares,\\residual update, channel synthesis};
-    \node[box,fill=nearorange!13,right=0.65cm of psomp] (psigw)
+    \node[box,fill=nearorange!13,right=0.55cm of psomp] (psigw)
       {P-SIGW: initialize from P-SOMP,\\refine angle, distance, and gain};
-    \node[box,fill=darkgreen!12,below=0.55cm of psigw] (output)
+    \node[box,fill=darkgreen!12,below=0.38cm of psigw] (output)
       {Off-grid channel estimate};
     \draw[arrow] (input) -- (white);
     \draw[arrow] (white) -- (psomp);
     \draw[arrow] (psomp) -- (psigw);
     \draw[arrow] (psigw) -- (output);
   \end{tikzpicture}
-  \caption{Combined workflow of the two algorithms emphasized in the
-  group presentation.}
+  \caption{Combined workflow of the P-SOMP and P-SIGW algorithms.}
   \label{fig:algorithms}
 \end{figure}
 
@@ -453,10 +450,8 @@ $\hat{\fieldvec{H}}
  \hat{\fieldvec{G}}^n$
 and return $\hat{\fieldvec{H}}$.
 
-\newpage
-
 % ---------------------------------------------------------------------------
-% Page 5: Results and conclusion
+% Results and conclusion
 % ---------------------------------------------------------------------------
 \tightsection{Simulation Results}
 
@@ -467,7 +462,7 @@ from Fig.~10 of the paper rather than reproducing its image.
 
 \begin{figure}[ht]
   \centering
-  \begin{tikzpicture}[x=0.075cm,y=0.22cm,font=\small]
+  \begin{tikzpicture}[x=0.060cm,y=0.165cm,font=\small]
     \draw[->] (0,0) -- (125,0) node[right] {distance (m)};
     \draw[->] (0,-25) -- (0,1) node[above] {NMSE (dB)};
     \foreach \x in {20,40,60,80,100,120}
@@ -511,7 +506,7 @@ planar. P-SOMP is much less sensitive to distance because its dictionary
 contains the required angle--distance atoms. P-SIGW is best because it
 also removes the polar-grid quantization error.
 
-The other experiments selected by the group support the same conclusion.
+The other experiments in the paper support the same conclusion.
 As SNR increases, near-field polar methods continue improving while
 mismatched angular methods approach an error floor. In the far-field
 setting, the polar methods match the angular baselines and become
@@ -519,14 +514,6 @@ slightly better at high SNR, because the Fresnel approximation is more
 accurate than the planar-wave one. Increasing pilot length improves all
 compressed-sensing estimators, but the gain is much larger when the
 representation matches the propagation physics.
-
-\tightsection{Conclusion}
-
-XL-MIMO does not destroy physical channel sparsity; it destroys
-\emph{angle-only} sparsity. Uniform angle sampling on distance rings and
-nonuniform sampling in $1/r$ let $\fieldvec{W}$ concentrate spherical
-paths. P-SOMP exploits this structure with low pilot overhead, while
-P-SIGW trades extra computation for off-grid accuracy.
 
 \renewcommand{\refname}{References}
 \begin{thebibliography}{1}
